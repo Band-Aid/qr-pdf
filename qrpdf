@@ -1,0 +1,71 @@
+require 'sinatra'
+require 'boxr'
+require 'redis'
+require 'rest-client'
+require 'Hashie'
+require 'json'
+require 'rqrcode'
+require 'rqrcode_png'
+require 'chunky_png'
+
+set :protection, :except => :frame_options
+
+def getToken(code)
+    
+    begin
+        res = RestClient.post('https://api.box.com/oauth2/token/', {grant_type: 'authorization_code', code: code, client_id: 'x', client_secret: 'x'})
+        parsed = JSON.parse(res.body)
+        obj = Hashie::Mash.new parsed
+        atoken = obj.access_token
+    rescue Exception => e
+        return "アクセストークンを取得できませんでした。アプリ開発者に問い合わせてください。"
+        
+    end
+    return atoken
+end
+
+
+post '/qr' do
+   fileid = params[:fileid]
+   # fileid = "150108834989"
+    code = params[:code]
+    atoken = getToken(code)
+    #atoken = "iRqYBqtnNaf1ed4pubVM64QFU982xAgH"
+    begin
+    client = Boxr::Client.new(atoken)
+    @sharedLink = client.create_shared_link_for_file(fileid).shared_link.url
+    qr = RQRCode::QRCode.new( @sharedLink, :size => 10, :level => :h )
+    png = qr.as_png(size: 500)
+    @image = png.to_data_url
+rescue Exception => e
+end
+    return erb :home
+end
+
+post '/convert2pdf-test' do
+    fileid = params[:fileid]
+    atoken = getToken(code)
+begin
+    client = Boxr::Client.new(atoken)
+    res = RestClient.get("https://api.box.com/2.0/files/#{fileid}/preview.pdf", {Authorization: "Bearer #{atoken}"})
+    boxfile = client.file_from_id(fileid).name
+    filename = File.basename(boxfile,'.*')
+    filePath = "./#{filename}.pdf"
+    File.open(filePath, 'wb'){
+    |file| file.write(res.body)
+    }
+    client.upload_new_version_of_file(filePath,fileid)
+    client.update_file(fileid, name: "#{filename}"+".pdf")
+    return "uploaded pdf"
+    File.delete(filePath)
+rescue Exception => e
+
+    end
+end
+
+get '/testview' do
+    @fileid = params[:fileid]
+    @atoken = getToken(code)
+
+    return erb :pdfview
+end
