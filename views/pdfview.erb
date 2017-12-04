@@ -1,0 +1,27 @@
+<style>
+.preview-container {
+  border: 1px solid #eee;
+  height: 490px;
+  width: 100%;
+}
+</style>
+
+
+<script>
+var ACCESS_TOKEN = 'CaV6wQAA64AEYXcSQ2oYmhaqETD5zwUm';
+
+var FILE_ID = '197998755621';
+
+
+var preview = new Box.Preview();
+preview.show('<%= @fileid %>', '<%= @atoken %>', {
+  container: '.preview-container',
+  showDownload: true,
+  // Comment out the following if you are using your own access token and file ID
+  //collection: [FILE_ID, FILE_ID_VIDEO, FILE_ID_3D, FILE_ID_TEXT]
+});
+</script>
+
+<body>
+  <div class="preview-container"></div>
+</body>
